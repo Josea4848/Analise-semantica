@@ -1,3 +1,23 @@
+class Stack:
+  #construtor
+  def __init__(self):
+    self.stack = list()
+  #push stack
+  def push_stack(self, value):
+    self.stack.append(value)
+  #pop 
+  def pop_stack(self):
+    self.stack.pop()
+  #search by value
+  def search(self, value):
+    if len(self.stack) > 0:
+      for v in reversed(self.stack):
+        if v == value:
+          return True
+      return False
+    else:
+      print("Empty stack")
+
 class Token:
   def __init__(self, token, tipo, linha) -> None:
     self.token = token
