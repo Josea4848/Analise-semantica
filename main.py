@@ -1,3 +1,5 @@
+from time import sleep
+
 class Stack:
   #construtor
   def __init__(self):
@@ -49,8 +51,9 @@ class Sintatico:
     self.erros = list()
     self.token = tokens[0]
     self.pilha = Stack()
-    self.scope = 0
-    self.x = 0
+    self.scope = 0 #Scope -> não é necessário se usar o marcador
+    self.x = 0 #Controle de entrada e saída de begin
+    self.pct = list() #Pilha para tipos
   #Avança token
   def next(self):
     if(self.posicao + 1 < len(self.tokens)):
@@ -286,19 +289,62 @@ class Sintatico:
       #Achou, mas é identificador de programa
       elif tipo == "program":
         self.erros.append(f"{self.token.token} is program identifier")
+      #ID declarado, vai pra tipo
+      else:
+        if tipo in ["real", "integer", "boolean"]:
+          self.pct.append(tipo)
+      
       self.next()
-      self.ativacao_de_procedimento()
-    
-      if self.token.token in ":=":
+      #adiciona erro pois procedure recebe :=
+      if self.token.token in ":=" and tipo == "procedure":
+        self.erros.append(f"{self.tokens[self.posicao-1].token} is a procedure, line {self.token.linha}")
+        while self.token.token != ";":
+          self.next()
+          self.erros.append(f"[{self.token.token}] invalid assignment to procedure , line {self.tokens[self.posicao - 1].linha}")
+        self.next()
+      #atribuição a variável (não-procedure)
+      elif self.token.token in ":=":
         if self.token.token != ":=":
           self.erros.append(f"'{self.token.token}' line {self.token.linha}, use :=")
         
         self.next() 
         self.expressao()
+
+        for v in self.pct:
+          print(v)
+        #sleep(10000)
+        if not self.verifySubTop():
+          self.erros.append(f"Invalid assignment {self.pct[len(self.pct)-1]} -> {self.pct[len(self.pct)-2]}")
+        self.clean_stack()
+
+        
+        """ #enquanto a pilha for mais que dois, reduz pilha
+        while len(self.pct) > 2:
+          self.verificaTipoAd()
+
+        if(not self.verifySubTop()):
+          self.erros.append(f"invalid operation, {self.pct[len(self.pct)-2]} type := {self.pct[len(self.pct)-1]} type, line {self.token.linha}")
+
+        self.pct.pop()
+        self.pct.pop() """
+
         if self.token.token == ";":
           self.next()
         elif self.token.tipo != "nls":
           self.erros.append(f"; missing, line {self.tokens[self.posicao - 1].linha}")
+      
+      elif self.token.token == "(":
+        if tipo != "procedure":
+          self.erros.append(f"{self.tokens[self.posicao-1].token} is not a procedure, line {self.token.linha}")
+        self.ativacao_de_procedimento()
+        if self.token.token == ";":
+          self.next()
+        else:
+          #print(f"CHEGUEI {self.token}")
+          while self.token.token != ";":
+            self.next()
+            self.erros.append(f"[{self.token.token}] invalid assignment to procedure , line {self.tokens[self.posicao - 1].linha}")
+          self.next()
 
       elif self.token.token == ";":
         self.next()
@@ -358,6 +404,10 @@ class Sintatico:
         #Achou, mas é identificador de programa
         elif tipo == "program":
           self.erros.append(f"{self.token.token} is program identifier")
+        #ID declarado, vai pra tipo
+        else:
+          if tipo in ["real", "integer"]:
+            self.pct.append(tipo)
 
         if self.token.tipo == "keyword":
           self.erros.append(f"{self.token.token} is a keyword")
@@ -442,6 +492,7 @@ class Sintatico:
     if self.token.token in ["=", "<", ">", "<=", ">=", "<>"]:
       self.next()
       self.expressao_simples()
+    
 
   def expressao_simples(self):
     if self.token.token in "+-":
@@ -451,12 +502,20 @@ class Sintatico:
     self.expressao_simples2()
 
   def expressao_simples2(self):
-    if self.token.token in ["+", "-"]:
+    if self.token.token in ["+", "-", "or"]:
+      token = self.token.token
       self.next()
       self.termo()
+      #verificação + ou -
+      if token in ["+", "-"]:
+        self.verificaTipoAd()
+      #verificação or
+      else:
+        self.verificaTipoLog()
       self.expressao_simples2()
     else:
       pass
+    
 
   def termo(self):
     self.fator()
@@ -464,10 +523,16 @@ class Sintatico:
 
   def termo2(self):
     if self.token.token in ["*","/","and"]:
+      token = self.token.token
       self.next()
       self.fator()
       self.termo2()
-
+      #verificação * e /
+      if token in ["*", "/"]:
+        self.verificaTipoAd()
+      #verificação and
+      else:
+        self.verificaTipoLog()
   def fator(self):
     #(expressão)
     if self.token.token == "(":  
@@ -480,9 +545,10 @@ class Sintatico:
         self.erros.append(f") expected, line {self.token.linha}")
     
     #real, inteiro, true ou false
-    elif self.token.tipo in ["real", "integer", "bool"]:
-      self.next()      
-
+    elif self.token.tipo in ["real", "integer", "boolean"]:
+      self.pct.append(self.token.tipo)
+      self.next()
+            
     #id
     elif self.token.tipo == "id":
       tipo, declared = self.pilha.search(self.token.token)
@@ -492,6 +558,9 @@ class Sintatico:
       #Achou, mas é identificador de programa
       elif tipo == "program":
         self.erros.append(f"{self.token.token} is program identifier")
+      #ID declarado, vai pra tipo
+      else:
+        self.pct.append(tipo)
 
       self.next()
       #id(expressão)
@@ -540,10 +609,57 @@ class Sintatico:
     self.scope -= 1
     #Limpa marcador
     self.pilha.pop_stack()
-      
     
+  #atualiza a pilha de tipo  
+  def atualizaPCT(self, resultante):
+    self.pct.pop()
+    self.pct.pop()
+    self.pct.append(resultante)
+
+  #verifica tipo para operador aditivo ou multiplicativo
+  def verificaTipoAd(self):
+    if len(self.pct) > 2:
+      topo = self.pct[len(self.pct)-1]
+      subtopo = self.pct[len(self.pct)-2]
+      if topo == "integer" and subtopo == "integer":
+        self.atualizaPCT("integer")
+      elif topo == "real" and subtopo == "real":
+        self.atualizaPCT("real")
+      elif topo == "integer" and subtopo == "real":
+        self.atualizaPCT("real")
+      elif topo == "real" and subtopo == "integer":
+        self.atualizaPCT("real")      
+      else:
+        self.atualizaPCT("erro")
+
+  def verificaTipoLog(self):
+    if len(self.pct) > 2:
+      topo = self.pct[len(self.pct)-1]
+      subtopo = self.pct[len(self.pct)-2]
+      if topo == "boolean" and subtopo == "boolean":
+        self.atualizaPCT("boolean")
+      else:
+        self.atualizaPCT("erro")
+
+  #verifica subtopo e topo
+  def verifySubTop(self):
+    topo = self.pct[len(self.pct)-1]
+    subtopo = self.pct[len(self.pct)-2]
+
+    if topo == "integer" and subtopo == "integer":
+      return True, None
+    elif subtopo == "real" and topo in ["integer", "real"]:
+      return True, None
+    elif topo == "boolean" and subtopo == "boolean":
+      return True, None
+    else: 
+      return False
     
-    
+  #limpa pilha
+  def clean_stack(self):
+    while(len(self.pct) != 0):
+      self.pct.pop()
+
 #Leitura dos tokens -> token | tipo
 tokensFile = open("tabela2.csv", "r")
 lines = tokensFile.readlines()
@@ -569,4 +685,6 @@ else:
 
 
 
-
+#pilha de tipos
+for v in app.pct:
+  print(v)
