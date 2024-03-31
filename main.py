@@ -116,7 +116,7 @@ class Sintatico:
         self.pilha.push_stack(self.token.token, "unknown", self.scope)
       #não foi declarado
       else:
-        self.erros.append(f"{self.token.token} has already been declared, line {self.token.linha}")
+        self.erros.append(f"'{self.token.token}' has already been declared, line {self.token.linha}")
 
       if self.token.tipo == "keyword":
         self.erros.append(f"{self.token.token} is a keyword, line {self.token.linha}")
@@ -135,7 +135,7 @@ class Sintatico:
         self.pilha.push_stack(self.token.token, "unknown", self.scope)
       #não foi declarado
       else:
-        self.erros.append(f"{self.token.token} has already been declared, line {self.token.linha}")
+        self.erros.append(f"'{self.token.token}' has already been declared, line {self.token.linha}")
       
       #se espera um id
       if self.token.tipo in ["id", "keyword"]:
@@ -273,9 +273,15 @@ class Sintatico:
 
 
   def lista_de_comandos2(self):
+    if self.token.token == ";":
+      self.next()
     if self.token.token in ['(','if','while','for'] or self.token.tipo == "id":
+      token_anterior = self.tokens[self.posicao-1]
+      if token_anterior.token != ";":
+        self.erros.append(f"; missing, line {token_anterior.linha}")
       self.comando()
       self.lista_de_comandos2()
+  
 
   def comando(self):
     #se lê ID
@@ -287,6 +293,7 @@ class Sintatico:
       #Achou, mas é identificador de programa
       elif tipo == "program":
         self.erros.append(f"{self.token.token} is program identifier")
+        self.pct.append("erro")
       #ID declarado, vai pra tipo
       else:
         if tipo in ["real", "integer", "boolean"]:
@@ -314,42 +321,26 @@ class Sintatico:
           self.erros.append(f"Invalid assignment {self.pct[len(self.pct)-1]} -> {self.pct[len(self.pct)-2]}, line {linha}")
         self.clean_stack()
 
-        
-        """ #enquanto a pilha for mais que dois, reduz pilha
-        while len(self.pct) > 2:
-          self.verificaTipoAd()
-
-        if(not self.verifySubTop()):
-          self.erros.append(f"invalid operation, {self.pct[len(self.pct)-2]} type := {self.pct[len(self.pct)-1]} type, line {self.token.linha}")
-
-        self.pct.pop()
-        self.pct.pop() """
-
-        if self.token.token == ";":
+        """ if self.token.token == ";":
           self.next()
-        elif self.token.tipo != "nls":
-          self.erros.append(f"; missing, line {self.tokens[self.posicao - 1].linha}")
+        elif self.token.tipo != "nls" and self.token.token != "end":
+          self.erros.append(f"; missing, line {self.tokens[self.posicao - 1].linha}") """
       
       elif self.token.token == "(":
         if tipo != "procedure":
           self.erros.append(f"{self.tokens[self.posicao-1].token} is not a procedure, line {self.token.linha}")
         self.ativacao_de_procedimento()
-        if self.token.token == ";":
+        
+        #procedimento com atribuição -> erro 
+        while self.token.token != ";":
           self.next()
-        else:
-          while self.token.token != ";":
-            self.next()
-            self.erros.append(f"[{self.token.token}] invalid assignment to procedure , line {self.tokens[self.posicao - 1].linha}")
-          self.next()
-
-      elif self.token.token == ";":
-        self.next()
-
-      elif self.token.tipo != "nls":
+          self.erros.append(f"[{self.token.token}] invalid assignment to procedure , line {self.tokens[self.posicao - 1].linha}")
+          
+      elif self.token.tipo != "nls" and self.token.token != ";":
         self.erros.append(f"assignment error or procedure call after {self.tokens[self.posicao-1].token}, line {self.tokens[self.posicao-1].linha}")
         if(self.tokens[self.posicao+1].token == ";"):
           self.next()
-          self.next()
+    
       
     elif self.token.token == "if":
       linha = self.token.linha
@@ -384,7 +375,7 @@ class Sintatico:
       
       #saída deve ser operador boolean
       if not self.verificaRel():
-        self.erros.append(f"Invalid expression for if, line {linha}")
+        self.erros.append(f"Invalid expression for while, line {linha}")
       self.clean_stack()
 
       if self.token.token == "do":
@@ -396,8 +387,8 @@ class Sintatico:
       if self.token.token == "begin":
         self.comando_composto()
       else:
-        self.comandos_opcionais
-    
+        self.comando()
+
     #for
     elif self.token.token == "for":
       self.next()
@@ -569,9 +560,11 @@ class Sintatico:
       #Achou, mas é identificador de programa
       elif tipo == "program":
         self.erros.append(f"{self.token.token} is program identifier")
+        self.pct.append("erro")
       #ID declarado, vai pra tipo
       else:
         self.pct.append(tipo)
+
 
       self.next()
       #id(expressão)
