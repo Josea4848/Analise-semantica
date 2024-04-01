@@ -275,7 +275,7 @@ class Sintatico:
   def lista_de_comandos2(self):
     if self.token.token == ";":
       self.next()
-    if self.token.token in ['(','if','while','for'] or self.token.tipo == "id":
+    if self.token.token in ['begin','(','if','while','for'] or self.token.tipo == "id":
       token_anterior = self.tokens[self.posicao-1]
       if token_anterior.token != ";":
         self.erros.append(f"; missing, line {token_anterior.linha}")
@@ -320,11 +320,6 @@ class Sintatico:
         if not self.verifySubTop():
           self.erros.append(f"Invalid assignment {self.pct[len(self.pct)-1]} -> {self.pct[len(self.pct)-2]}, line {linha}")
         self.clean_stack()
-
-        """ if self.token.token == ";":
-          self.next()
-        elif self.token.tipo != "nls" and self.token.token != "end":
-          self.erros.append(f"; missing, line {self.tokens[self.posicao - 1].linha}") """
       
       elif self.token.token == "(":
         if tipo != "procedure":
@@ -358,11 +353,7 @@ class Sintatico:
       elif self.token.tipo != "nls":
         self.erros.append("expected [then keyword]")
 
-      #comando dentro de comando      
-      if self.token.token == "begin":
-        self.comando_composto()
-      else:
-        self.comando()
+      self.comando() 
 
       self.parte_else()
 
@@ -383,11 +374,12 @@ class Sintatico:
       elif self.token.tipo != "nls":
         self.erros.append(f"Expected 'do' keyword, line {linha}")
       
+      self.comando()
 
-      if self.token.token == "begin":
-        self.comando_composto()
-      else:
-        self.comando()
+    #begin end
+    elif self.token.token == "begin":
+      self.comando_composto()
+
 
     #for
     elif self.token.token == "for":
@@ -454,10 +446,8 @@ class Sintatico:
       elif self.token.tipo != "nls":
         self.erros.append(f"expected 'do' keyword, line {self.token.linha}")
 
-      if self.token.token == "begin":
-        self.comando_composto()
-      else:
-        self.comandos_opcionais
+
+      self.comando()
     else:
       pass
 
