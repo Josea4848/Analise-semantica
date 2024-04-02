@@ -255,7 +255,7 @@ class Sintatico:
       if self.token.token == "end":
         self.next()
       elif self.token.tipo != "nls":
-        self.erros.append(f"Expected end, before {self.token.token}, line {self.token.linha}")
+        self.erros.append(f"Expected end, line {self.token.linha}")
       #garantindo o fim do escopo, iremos limpá-lo da pilha
       self.x -= 1
       if self.x == 0:
@@ -318,7 +318,7 @@ class Sintatico:
         self.expressao()
 
         if not self.verifySubTop():
-          self.erros.append(f"Invalid assignment {self.pct[len(self.pct)-1]} -> {self.pct[len(self.pct)-2]}, line {linha}")
+          self.erros.append(f"Invalid assignment '{self.pct[len(self.pct)-1]}' -> {self.pct[len(self.pct)-2]}, line {linha}")
         self.clean_stack()
       
       elif self.token.token == "(":
@@ -354,7 +354,8 @@ class Sintatico:
         self.erros.append("expected [then keyword]")
 
       self.comando() 
-
+      if self.token.token == ";":
+        self.next()
       self.parte_else()
 
     elif self.token.token == "while":
@@ -375,6 +376,9 @@ class Sintatico:
         self.erros.append(f"Expected 'do' keyword, line {linha}")
       
       self.comando()
+
+      if self.token.token == ";":
+        self.next()
 
     #begin end
     elif self.token.token == "begin":
@@ -448,6 +452,10 @@ class Sintatico:
 
 
       self.comando()
+
+      if self.token.token == ";":
+        self.next()
+    
     else:
       pass
 
@@ -519,6 +527,7 @@ class Sintatico:
       self.next()
       self.fator()
       self.termo2()
+
       #verificação * e /
       if token in ["*", "/"]:
         self.verificaTipoAd()
@@ -527,7 +536,7 @@ class Sintatico:
         self.verificaTipoLog()
   def fator(self):
     #(expressão)
-    if self.token.token == "(":  
+    if self.token.token == "(": 
       self.next()
       self.expressao()
       
@@ -634,7 +643,7 @@ class Sintatico:
       if topo == "boolean" and subtopo == "boolean":
         self.atualizaPCT("boolean")
       else:
-        self.atualizaPCT("erro")
+        self.atualizaPCT("Invalid operation")
 
   #verifica operação entre operadores relacionais
   def verificaTipoRel(self):
@@ -644,7 +653,7 @@ class Sintatico:
       if topo in ["integer", "real"] and subtopo in ["integer", "real"]:  
         self.atualizaPCT("boolean")
       else:
-        self.atualizaPCT("Erro")        
+        self.atualizaPCT("Invalid operation")        
 
   #verifica subtopo e topo
   def verifySubTop(self):
