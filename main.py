@@ -176,7 +176,7 @@ class Sintatico:
         self.pilha.push_stack(self.token.token, "procedure", self.scope)
       #já foi declarado algo com esse id no mesmo escopo
       else:
-        self.erros.append(f"{self.token.token} have already been declared")
+        self.erros.append(f"{self.token.token} have already been declared, line {self.token.linha}")
       self.pilha.push_stack("$")
       self.scope += 1
       self.next()
