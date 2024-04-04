@@ -354,8 +354,7 @@ class Sintatico:
         self.erros.append("expected [then keyword]")
 
       self.comando() 
-      if self.token.token == ";":
-        self.next()
+      
       self.parte_else()
 
     elif self.token.token == "while":
@@ -376,9 +375,6 @@ class Sintatico:
         self.erros.append(f"Expected 'do' keyword, line {linha}")
       
       self.comando()
-
-      if self.token.token == ";":
-        self.next()
 
     #begin end
     elif self.token.token == "begin":
@@ -453,8 +449,6 @@ class Sintatico:
 
       self.comando()
 
-      if self.token.token == ";":
-        self.next()
     
     else:
       pass
